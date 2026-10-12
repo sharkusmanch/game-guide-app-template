@@ -19,7 +19,7 @@ npm run typecheck
 npm run build
 ```
 
-Build output is `dist/`; Vite's `./` asset base supports GitHub Pages project paths. Pull requests run browser/state/configuration tests, type checks and builds. Both workflows call shared browser and Docker runtime validation; Pages deploys the checked artifact only after both jobs pass. Select **GitHub Actions** as the repository's Pages source.
+Build output is `dist/`; Vite's `./` asset base supports GitHub Pages project paths. Pull requests run browser/state/configuration tests, type checks and builds. Checks handles pull requests/dispatch; Pages is the single main-push validation path. Both call shared browser and Docker runtime validation; Pages deploys the checked artifact only after both jobs pass. Select **GitHub Actions** as the repository's Pages source.
 
 ## Configure the next game
 
@@ -48,7 +48,7 @@ The script validates all inputs and current configuration before writing `game.c
 - `src/common/acquire.ts`: GET/no-store byte acquisition, redirect/HTML/oversize rejection, 1 MiB limit and 5-second deadline including the body. HTTP(S) URLs cannot embed credentials. Same-origin reads use the browser's existing session credentials; cross-origin reads explicitly omit credentials and endpoints must allow CORS. Redirects remain rejected. This request policy does not verify a private login or authentication-to-import flow; authentication and trust require environment-specific review.
 - `src/common/state.ts`: version-1 progress under `guide:<game-id>:v1`; bounded derived history, manual marks and reversible in-session new attempts. `LoadGate` prevents old source/attempt/revision results from committing.
 
-Progress exports contain derived snapshots and manual tracking, never raw save bytes. Restore validates the complete envelope before changing state and disables remote reads. Invalid, future and foreign-game local data remain untouched; **Download recovery** saves the original value. While recovery is pending, progress remains in memory and can be exported. Undo survives until the next new attempt/restore or page reload. If browser storage is unavailable, export before closing the page. A successful parse shows its timestamp so stored facts can be recognized as old.
+Progress exports contain derived snapshots and manual tracking, never raw save bytes. Local backups retain the configured `source.url` with remote reads disabled; keep private backups outside public artifacts. A game may choose URL sanitization as an additional policy, with its own implementation and regression test. Restore validates the complete envelope before changing state and disables remote reads. Invalid, future and foreign-game local data remain untouched; **Download recovery** saves the original value. While recovery is pending, progress remains in memory and can be exported. Undo survives until the next new attempt/restore or page reload. If browser storage is unavailable, export before closing the page. A successful parse shows its timestamp so stored facts can be recognized as old.
 
 ## Synthetic save format
 

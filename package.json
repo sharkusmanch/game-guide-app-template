@@ -12,7 +12,7 @@
     "typecheck": "tsc --noEmit",
     "build": "vite build",
     "configure": "node scripts/configure-game.mjs",
-    "test:hosting": "python3 -m unittest discover -s hosting/test -p '*_test.py' && node --test hosting/test/installer.test.mjs",
+    "test:hosting": "python3 -m unittest discover -s hosting/test -p '*_test.py' && node --test hosting/test/*.test.mjs",
     "test:runtime": "node hosting/test/runtime-ci.mjs",
     "install:skill": "node scripts/install-skill.mjs"
   },

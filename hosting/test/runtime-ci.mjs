@@ -2,7 +2,7 @@
 // Actual Docker acceptance runner. No registry push or cluster mutation.
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
-import { mkdtemp, mkdir, readFile, rm, stat, writeFile } from 'node:fs/promises';
+import { mkdtemp, mkdir, rm, stat, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { request } from 'node:http';
@@ -39,7 +39,7 @@ try {
   assert.equal(extract.status, 0);
   const uid = String(process.getuid()), gid = String(process.getgid());
   docker('run', '--rm', '--mount', `type=bind,src=${source},dst=/source,readonly`, '--mount', `type=bind,src=${output},dst=/output`, nodeImage,
-    'sh', '-ec', 'trap \'chown -R "$1:$2" /output\' EXIT; mkdir /work; cp -R /source/. /work/; cd /work; npm ci; npm test; npm run typecheck; npm run build; cp -R dist/. /output/', 'build', uid, gid);
+    'sh', '/source/hosting/build-output.sh', '/source', '/output', uid, gid);
   const files = command('find', [output, '-type', 'f']).split('\n');
   assert.ok(files.length > 1);
   for (const path of files) {
@@ -62,7 +62,7 @@ try {
   containers.push(upstream);
   docker('run', '-d', '--name', upstream, '--network', network, '--network-alias', 'progress', '--read-only', '--tmpfs', '/tmp', '--user', '10000:10000', nodeImage,
     'node', '--input-type=module', '-e', "import http from 'node:http'; http.createServer((req,res)=>{let body='';req.on('data',c=>body+=c);req.on('end',()=>{res.setHeader('Content-Type','application/json');res.end(JSON.stringify({path:req.url,method:req.method,headers:req.headers,body}));});}).listen(8080,'0.0.0.0');");
-  await writeFile(join(saves, 'selected.bin'), Buffer.from([0, 255, 4, 128]));
+  await writeFile(join(saves, 'Example RPG (USA) [Rev 1] + Bonus #1.srm'), Buffer.from([0, 255, 4, 128]));
   async function start(name, settings = []) {
     containers.push(name);
     docker('run', '-d', '--name', name, '--network', network, '--read-only', '--tmpfs', '/tmp:rw,nosuid,nodev,noexec,size=16m', '--cap-drop', 'ALL', '--security-opt', 'no-new-privileges', '--publish', '127.0.0.1::8080', '--mount', `type=bind,src=${saves},dst=/saves,readonly`, ...settings.flatMap(x => ['--env', x]), image);
@@ -78,7 +78,7 @@ try {
   assert.equal((await get(`${defaults}/save`)).status, 404);
   assert.equal((await get(`${defaults}/companion/api/achievements/ra/12`)).status, 404);
   const name = `guide-selected-${suffix}`;
-  const base = await start(name, ['SAVE_FILE=/saves/selected.bin', 'PROGRESS_UPSTREAM=progress:8080', 'PROGRESS_PREFIX=/service/v1', 'PROGRESS_IDS=12,34']);
+  const base = await start(name, ['SAVE_FILE=/saves/Example RPG (USA) [Rev 1] + Bonus #1.srm', 'PROGRESS_UPSTREAM=progress:8080', 'PROGRESS_PREFIX=/service/v1', 'PROGRESS_IDS=12,34']);
   const root = await get(base);
   assert.equal(root.status, 200);
   const asset = root.body.toString().match(/(?:src|href)="\.\/(assets\/[^\"]+)"/);
@@ -109,7 +109,7 @@ try {
   assert.equal(docker('inspect', name, '--format', '{{.HostConfig.ReadonlyRootfs}}'), 'true');
   docker('exec', name, 'python3', '-c', "import pathlib; pathlib.Path('/tmp/write-test').write_text('ok')");
   assert.notEqual(spawnSync('docker', ['exec', name, 'python3', '-c', "import pathlib; pathlib.Path('/srv/www/write-test').write_text('fail')"]).status, 0);
-  for (const setting of ['SAVE_FILE=/saves/a;invalid', 'PROGRESS_IDS=0', 'PROGRESS_IDS=12', 'PROGRESS_UPSTREAM=host:65536', 'PROGRESS_PREFIX=/../escape']) {
+  for (const setting of ['SAVE_FILE=/saves/a;invalid', 'PROGRESS_IDS=0', 'PROGRESS_IDS=12', 'PROGRESS_UPSTREAM=host:65536', 'PROGRESS_PREFIX=/../escape', 'PROGRESS_PREFIX=/index.html', 'PROGRESS_PREFIX=/assets/private']) {
     const invalid = spawnSync('docker', ['run', '--rm', '--read-only', '--tmpfs', '/tmp', '--env', setting, image], { encoding: 'utf8' });
     assert.notEqual(invalid.status, 0);
     assert.match(invalid.stderr, /Invalid runtime configuration:/);

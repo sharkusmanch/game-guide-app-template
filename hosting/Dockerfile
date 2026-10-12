@@ -1,3 +1,4 @@
+ARG APP_VERSION=0.1.0
 # renovate: datasource=docker depName=node
 ARG NODE_VERSION=24.21.0
 # renovate: datasource=docker depName=alpine
@@ -13,7 +14,7 @@ RUN npm run build
 FROM alpine:${ALPINE_VERSION} AS runtime
 ARG SOURCE_URL=https://github.com/sharkusmanch/game-guide-app-template
 ARG SOURCE_REVISION=unknown
-ARG APP_VERSION=0.1.0
+ARG APP_VERSION
 LABEL org.opencontainers.image.source=$SOURCE_URL \
       org.opencontainers.image.revision=$SOURCE_REVISION \
       org.opencontainers.image.version=$APP_VERSION

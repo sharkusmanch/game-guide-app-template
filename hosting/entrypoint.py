@@ -6,17 +6,25 @@ import re
 import sys
 
 
-def safe_path(value):
+def safe_prefix(value):
     return bool(re.fullmatch(r'/(?:[A-Za-z0-9_.-]+/)*[A-Za-z0-9_.-]+', value)) and all(p not in ('.', '..') for p in value.split('/')[1:])
 
 
-def configuration(env):
+def safe_file(value):
+    # Quoted Nginx literals need no escaping when quotes, variables and escapes
+    # are excluded. Normal filename punctuation remains literal, including #.
+    return value.startswith('/') and all(part not in ('', '.', '..') for part in value.split('/')[1:]) and all(c.isprintable() and c not in '\\"\'`$;{}' for c in value)
+
+
+def configuration(env, static_root=pathlib.Path('/srv/www')):
     save = env.get('SAVE_FILE', '/saves/unconfigured.bin')
     prefix = env.get('PROGRESS_PREFIX', '/companion')
     upstream = env.get('PROGRESS_UPSTREAM', '')
     raw_ids = env.get('PROGRESS_IDS', '')
-    if not safe_path(save) or not safe_path(prefix):
-        raise ValueError('SAVE_FILE and PROGRESS_PREFIX must be absolute literal paths without traversal')
+    if not safe_file(save):
+        raise ValueError('SAVE_FILE must be an absolute literal file path without traversal, quotes, escapes or directive syntax')
+    if not safe_prefix(prefix):
+        raise ValueError('PROGRESS_PREFIX must be a safe absolute URL path without traversal')
     if upstream:
         match = re.fullmatch(r'([A-Za-z0-9](?:[A-Za-z0-9.-]*[A-Za-z0-9])?):([0-9]{1,5})', upstream)
         if not match or not 1 <= int(match[2]) <= 65535 or '..' in match[1]:
@@ -27,7 +35,7 @@ def configuration(env):
     if ids and not upstream:
         raise ValueError('PROGRESS_UPSTREAM is required when PROGRESS_IDS is nonempty')
     # Reject route collisions before producing any config or making DNS requests.
-    if prefix.startswith('/save') or prefix.split('/')[1] in ('healthz', 'assets'):
+    if prefix.startswith('/save') or prefix.split('/')[1] in ('healthz', 'assets', 'index.html') or (static_root / prefix.split('/')[1]).exists():
         raise ValueError('PROGRESS_PREFIX conflicts with a reserved route')
     routes = '\n'.join(f'''location = {prefix}/api/achievements/ra/{i} {{
       proxy_pass http://{upstream}{prefix}/api/achievements/ra/{i};
@@ -59,7 +67,7 @@ http {{
     if ($request_method !~ ^(GET|HEAD)$) {{ return 405; }}
     location = /healthz {{ default_type text/plain; return 200 "ok\\n"; }}
     location = /save {{
-      alias {save};
+      alias "{save}";
       types {{ }}
       default_type application/octet-stream;
       disable_symlinks on;
