@@ -1,0 +1,10 @@
+{
+  "id": "demo-quest",
+  "title": "Demo Quest",
+  "description": "A synthetic companion demonstrating a reusable game guide.",
+  "repository": {
+    "owner": "example",
+    "name": "game-guide-app-template"
+  },
+  "mode": "demo"
+}
