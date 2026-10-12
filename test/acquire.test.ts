@@ -1,4 +1,4 @@
-import { it, expect, vi } from "vitest";
+import { afterEach, it, expect, vi } from "vitest";
 import { readRemote, LoadGate, readUpload } from "../src/common/acquire";
 const fetcher = (response: Response) =>
   vi.fn(async () => response) as unknown as typeof fetch;
@@ -16,7 +16,7 @@ it("uses GET/no-store with redirect rejection", async () => {
       method: "GET",
       cache: "no-store",
       redirect: "error",
-      credentials: "omit",
+      credentials: "same-origin",
     }),
   );
 });
@@ -157,4 +157,59 @@ it("rejects HTML even after a long whitespace prefix", async () => {
       fetcher: fetcher(new Response(" ".repeat(300) + "<!doctype html>login")),
     }),
   ).rejects.toThrow(/HTML/);
+});
+
+afterEach(() => vi.unstubAllGlobals());
+it.each([
+  "<!-- authentication gateway -->\n<!doctype html><html><body>Sign in</body></html>",
+  '<?xml version="1.0" encoding="UTF-8"?>\n<!-- gateway --><html xmlns="http://www.w3.org/1999/xhtml"><body>Sign in</body></html>',
+  ' \n<!-- first --><!-- second --><?xml-stylesheet href="login.css"?>\n<head><title>Sign in</title></head>',
+])(
+  "rejects wrong-media-type HTML after document comments or prologs: %s",
+  async (body) => {
+    await expect(
+      readRemote("/save", {
+        fetcher: fetcher(
+          new Response(body, {
+            headers: { "Content-Type": "application/octet-stream" },
+          }),
+        ),
+      }),
+    ).rejects.toThrow(/HTML/);
+  },
+);
+it("preserves non-HTML bytes with XML declarations and comments", async () => {
+  const body =
+    '<?xml version="1.0"?><!-- synthetic save --><save><chapter>2</chapter></save>';
+  expect(
+    new TextDecoder().decode(
+      await readRemote("/save", { fetcher: fetcher(new Response(body)) }),
+    ),
+  ).toBe(body);
+});
+it.each([
+  ["/save", "same-origin"],
+  ["https://guide.example.test/save", "same-origin"],
+  ["https://another.example.test/save", "omit"],
+  ["http://guide.example.test/save", "omit"],
+  ["https://guide.example.test:8443/save", "omit"],
+  ["//another.example.test/save", "omit"],
+])("selects session credential policy for %s", async (url, credentials) => {
+  vi.stubGlobal("location", {
+    href: "https://guide.example.test/game-guide/",
+    origin: "https://guide.example.test",
+  });
+  const get = fetcher(new Response("synthetic"));
+  expect(
+    new TextDecoder().decode(await readRemote(url, { fetcher: get })),
+  ).toBe("synthetic");
+  expect(get).toHaveBeenCalledWith(
+    url,
+    expect.objectContaining({
+      credentials,
+      method: "GET",
+      cache: "no-store",
+      redirect: "error",
+    }),
+  );
 });

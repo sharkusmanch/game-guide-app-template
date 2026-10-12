@@ -5,6 +5,11 @@ import { dirname, resolve } from "node:path";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const fields = ["id", "title", "owner", "repo"];
+const record = (value) =>
+  value !== null && typeof value === "object" && !Array.isArray(value);
+const text = (value) => typeof value === "string" && value.trim().length > 0;
+const stringRecord = (value) =>
+  record(value) && Object.values(value).every(text);
 const htmlEscape = (text) =>
   text.replace(
     /[&<>"']/g,
@@ -66,10 +71,34 @@ try {
   );
   const [pkg, lock, game] = originals.slice(0, 3).map((x) => JSON.parse(x));
   if (
-    !pkg ||
-    typeof pkg !== "object" ||
-    !lock?.packages?.[""] ||
-    !game?.repository ||
+    !record(pkg) ||
+    !text(pkg.name) ||
+    !text(pkg.version) ||
+    !stringRecord(pkg.scripts) ||
+    !["dev", "test", "typecheck", "build", "configure"].every((key) =>
+      text(pkg.scripts[key]),
+    ) ||
+    !stringRecord(pkg.dependencies) ||
+    !stringRecord(pkg.devDependencies) ||
+    !record(pkg.engines) ||
+    !text(pkg.engines.node) ||
+    !record(lock) ||
+    lock.lockfileVersion !== 3 ||
+    !record(lock.packages) ||
+    !record(lock.packages[""]) ||
+    lock.name !== pkg.name ||
+    lock.version !== pkg.version ||
+    lock.packages[""].name !== pkg.name ||
+    lock.packages[""].version !== pkg.version ||
+    !stringRecord(lock.packages[""].dependencies) ||
+    !stringRecord(lock.packages[""].devDependencies) ||
+    !record(game) ||
+    !text(game.id) ||
+    !text(game.title) ||
+    !text(game.description) ||
+    !record(game.repository) ||
+    !text(game.repository.owner) ||
+    !text(game.repository.name) ||
     !["demo", "unsupported"].includes(game.mode)
   )
     throw Error("Invalid existing project configuration");

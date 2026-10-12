@@ -177,3 +177,37 @@ it("a late remote body cannot populate a new attempt", async () => {
   );
   expect(screen.queryByText("Chapter")).toBeNull();
 });
+
+it("reports manual cancellation and keeps newer source status when the old request finishes", async () => {
+  let release!: (v: Response) => void;
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(
+      () =>
+        new Promise<Response>((r) => {
+          release = r;
+        }),
+    ),
+  );
+  render(<App />);
+  fireEvent.input(screen.getByLabelText("Save URL"), {
+    target: { value: "/save" },
+  });
+  fireEvent.click(screen.getByLabelText("Enable remote reads"));
+  fireEvent.click(screen.getByRole("button", { name: "Read save" }));
+  expect(screen.getByRole("status").textContent).toContain("Reading");
+  fireEvent.click(
+    screen.getByRole("checkbox", { name: "Read the route notes" }),
+  );
+  expect(screen.getByRole("status").textContent).toMatch(/cancelled/i);
+  expect(
+    screen.getByRole("button", { name: "Read save" }).hasAttribute("disabled"),
+  ).toBe(false);
+  fireEvent.input(screen.getByLabelText("Save URL"), {
+    target: { value: "/new-save" },
+  });
+  release(new Response(sampleText));
+  await new Promise((r) => setTimeout(r, 0));
+  expect(screen.getByRole("status").textContent).toContain("Source changed");
+  expect(screen.queryByText("Chapter")).toBeNull();
+});

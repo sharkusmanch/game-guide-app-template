@@ -85,19 +85,22 @@ export function validateSource(url: string) {
     parsed.password
   )
     throw Error("Use an HTTP(S) URL without embedded credentials");
+  return parsed;
 }
 export async function readRemote(
   url: string,
   options: ReadOptions = {},
 ): Promise<Uint8Array> {
-  validateSource(url);
+  const source = validateSource(url);
+  const credentials: RequestCredentials =
+    source.origin === globalThis.location?.origin ? "same-origin" : "omit";
   return bounded(
     async (signal) => {
       const response = await (options.fetcher ?? fetch)(url, {
         method: "GET",
         cache: "no-store",
         redirect: "error",
-        credentials: "omit",
+        credentials,
         signal,
       });
       if (!response.ok || response.redirected)
@@ -110,9 +113,14 @@ export async function readRemote(
       if (Number(response.headers.get("Content-Length")) > max)
         throw Error("Save is too large");
       const bytes = await streamBytes(response.body, signal, max);
-      const prefix = new TextDecoder()
-        .decode(bytes)
-        .trimStart();
+      // Normalize only the sniffing view; returned save bytes stay untouched.
+      let prefix = new TextDecoder().decode(bytes).trimStart();
+      while (prefix.startsWith("<!--") || prefix.startsWith("<?")) {
+        const endMarker = prefix.startsWith("<!--") ? "-->" : "?>";
+        const end = prefix.indexOf(endMarker, 2);
+        if (end < 0) break;
+        prefix = prefix.slice(end + endMarker.length).trimStart();
+      }
       if (/^(?:<!doctype\s+html|<html|<head|<body)/i.test(prefix))
         throw Error("Expected save bytes, received HTML");
       return bytes;

@@ -48,6 +48,7 @@ export function App() {
     action();
     refresh();
     if (message) setStatus(message);
+    else if (busy) setStatus("Read cancelled. Manual progress updated.");
   };
   async function load(
     read: (signal: AbortSignal) => Promise<Uint8Array>,

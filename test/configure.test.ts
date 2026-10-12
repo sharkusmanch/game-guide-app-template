@@ -133,3 +133,24 @@ it("builds two isolated renamed projects and rejects demo decoding", async () =>
     expect(await readdir(join(root, "dist", "assets"))).not.toHaveLength(0);
   }
 });
+
+it.each([
+  ["package.json", "[]"],
+  ["package.json", "{}"],
+  ["package.json", '{"name":42,"version":"0.1.0"}'],
+  ["package-lock.json", '{"packages":{"":[]}}'],
+  ["package-lock.json", '{"packages":[]}'],
+  [
+    "game.config.json",
+    '{"id":"demo-quest","title":"Demo Quest","description":"Synthetic","repository":[],"mode":"demo"}',
+  ],
+])(
+  "rejects malformed %s metadata shape before any file changes",
+  async (path, malformed) => {
+    const root = await project("guide-shape-");
+    await writeFile(join(root, path), malformed);
+    const before = await treeContents(root);
+    expect(configure(root).status).not.toBe(0);
+    expect(await treeContents(root)).toEqual(before);
+  },
+);
