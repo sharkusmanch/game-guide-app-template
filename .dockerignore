@@ -1,0 +1,13 @@
+# Only the frontend build and runtime entrypoint enter the build context.
+**
+!package.json
+!package-lock.json
+!index.html
+!game.config.json
+!vite.config.ts
+!tsconfig.json
+!src/
+!src/**
+!hosting/
+!hosting/Dockerfile
+!hosting/entrypoint.py

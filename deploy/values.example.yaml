@@ -1,0 +1,87 @@
+# Validated by Helm template/lint against app-template 5.3.0.
+# This is an example, not an installer. Replace the impossible digest before use.
+controllers:
+  guide:
+    type: deployment
+    replicas: 1
+    strategy: Recreate
+    pod:
+      automountServiceAccountToken: false
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10000
+        runAsGroup: 10000
+        fsGroup: 10000
+    containers:
+      app:
+        image:
+          repository: ghcr.io/example/example-rpg-guide
+          digest: "sha256:0000000000000000000000000000000000000000000000000000000000000000"
+          pullPolicy: IfNotPresent
+        env:
+          SAVE_FILE: /saves/unconfigured.bin
+          PROGRESS_UPSTREAM: ""
+          PROGRESS_PREFIX: /companion
+          PROGRESS_IDS: ""
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+          capabilities:
+            drop: [ALL]
+        resources:
+          requests:
+            cpu: 10m
+            memory: 32Mi
+          limits:
+            memory: 128Mi
+        probes:
+          liveness:
+            enabled: true
+            custom: true
+            spec:
+              httpGet:
+                path: /healthz
+                port: 8080
+              periodSeconds: 10
+          readiness:
+            enabled: true
+            custom: true
+            spec:
+              httpGet:
+                path: /healthz
+                port: 8080
+              periodSeconds: 10
+          startup:
+            enabled: true
+            custom: true
+            spec:
+              httpGet:
+                path: /healthz
+                port: 8080
+              failureThreshold: 30
+              periodSeconds: 2
+service:
+  guide:
+    controller: guide
+    ports:
+      http:
+        port: 8080
+        targetPort: 8080
+persistence:
+  tmp:
+    type: emptyDir
+    medium: Memory
+    sizeLimit: 16Mi
+    globalMounts:
+      - path: /tmp
+  source:
+    enabled: false
+    type: persistentVolumeClaim
+    existingClaim: example-existing-save-source
+    globalMounts:
+      - path: /saves
+        readOnly: true
+# Choose and review environment authentication/network controls before enabling.
+ingress:
+  guide:
+    enabled: false

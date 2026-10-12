@@ -7,16 +7,5 @@ on:
 permissions:
   contents: read
 jobs:
-  browser:
-    name: Browser tests, types and build
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v7
-      - uses: actions/setup-node@v7
-        with:
-          node-version: "24"
-          cache: npm
-      - run: npm ci
-      - run: npm test
-      - run: npm run typecheck
-      - run: npm run build
+  validate:
+    uses: ./.github/workflows/validate.yml

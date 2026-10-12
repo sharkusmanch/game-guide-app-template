@@ -11,7 +11,10 @@
     "test": "vitest run",
     "typecheck": "tsc --noEmit",
     "build": "vite build",
-    "configure": "node scripts/configure-game.mjs"
+    "configure": "node scripts/configure-game.mjs",
+    "test:hosting": "python3 -m unittest discover -s hosting/test -p '*_test.py' && node --test hosting/test/installer.test.mjs",
+    "test:runtime": "node hosting/test/runtime-ci.mjs",
+    "install:skill": "node scripts/install-skill.mjs"
   },
   "dependencies": {
     "preact": "^11.0.1"

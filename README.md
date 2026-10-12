@@ -19,9 +19,17 @@ npm run typecheck
 npm run build
 ```
 
-Build output is `dist/`; Vite's `./` asset base supports GitHub Pages project paths. Pull requests run browser/state/configuration tests, type checks and builds. The Pages workflow repeats these checks before deploying `main`. Select **GitHub Actions** as the repository's Pages source.
+Build output is `dist/`; Vite's `./` asset base supports GitHub Pages project paths. Pull requests run browser/state/configuration tests, type checks and builds. Both workflows call shared browser and Docker runtime validation; Pages deploys the checked artifact only after both jobs pass. Select **GitHub Actions** as the repository's Pages source.
 
 ## Configure the next game
+
+Generate a repository from the GitHub template (when repository creation is in scope), then configure it:
+
+```sh
+gh repo create example/example-rpg-guide --template sharkusmanch/game-guide-app-template --public --clone
+cd example-rpg-guide
+npm ci
+```
 
 Run this inside your generated project:
 
@@ -51,3 +59,36 @@ The original demo format is a UTF-8 JSON object with exactly these fields:
 ```
 
 `chapter` is an integer from 0 to 9; `collectibles` is an integer from 0 to 99. Other fields and values are rejected. The demo identity uses a stable non-cryptographic byte fingerprint for change tracking. It provides no proof of game completion, save authenticity or achievement awards.
+
+## Next-game agent workflow
+
+Read [docs/workflow.md](docs/workflow.md) for the bundled brief, evidence matrix, adapter contract and review/release forms. Install from the canonical checkout into your chosen skills directory:
+
+```sh
+node scripts/install-skill.mjs --skills-dir "$HOME/.codex/skills" --mode link
+```
+
+Use `--mode copy` for a self-contained installation. Both modes preserve bundled resources and refuse an unrelated existing target; repeating the same installation is safe. A link follows canonical updates and requires retaining this checkout; a changed copy requires deliberate removal/reinstallation by its owner.
+
+Concrete invocation after configuring Example RPG:
+
+> Use $build-game-guide to build Example RPG's manual companion in this generated repository. Read docs/workflow.md and fill the bundled brief/evidence/review forms outside public source. Platform, edition and target core are unknown; leave decoding and actual awards unavailable. Implement a sourced manual guide and run local checks. Publication and private deployment are out of scope.
+
+| Owner | Scope |
+|---|---|
+| Game adapter / guide data | Edition/core/profile validation, game facts, objectives and game-specific planning; independently attributable fixture expectations |
+| Common browser modules | Byte acquisition/cancellation, source/attempt guards, namespaced persistence, export/restore and recovery |
+| Private source adapter | Read-only fixed-file or latest-validated-slot selection, format validation and atomic derived output; no synchronized-save edits |
+| Existing progress service | Confirmed hardcore awards and its current authentication/feed contracts; preserve verified service features |
+| Common runtime | `dist/`, exact read-only `/save` and explicit progress route allowlist; no decoder or awards inference |
+
+## Hosting and validation
+
+Public Pages needs no private infrastructure. For optional private packaging, use [docs/hosting.md](docs/hosting.md) and [deploy/values.example.yaml](deploy/values.example.yaml). The example has disabled ingress/source storage and an unusable image digest placeholder until environment review. Use each app's immutable source bundle through an existing trusted publisher; there is no automatic image push or cluster application.
+
+```sh
+npm run test:hosting  # Python 3 plus Node: runtime configuration and installer
+npm run test:runtime  # Docker: committed source, actual runtime, output ownership/cleanup
+```
+
+Docker tests require Docker and stage the committed `HEAD`, not uncommitted edits. Local tests, synthetic demo behavior and Helm rendering do not establish a game's decoder/awards or a private environment's authenticated import, trust, storage and network acceptance. Record those gates explicitly in the release forms.
